@@ -31,12 +31,12 @@ jobs:
         if: ${{ matrix.version == '' }}
         uses: ./
 
-      - name: Test Artemis in Path
+      - name: Test Artemis in PATH
         shell: bash
         run: |
           artemis --version
 
-      - name: Test Toit in Path - native shell
+      - name: Test Toit in PATH - native shell
         run: |
           artemis --version
 
