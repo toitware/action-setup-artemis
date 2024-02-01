@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "*"
+      - "*/*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        version: [v0.14.4, latest, ""]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup with version argument
+        id: setup1
+        if: ${{ matrix.version != '' }}
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+
+      - name: Setup without version argument
+        id: setup2
+        if: ${{ matrix.version == '' }}
+        uses: ./
+
+      - name: Test Artemis in PATH
+        shell: bash
+        run: |
+          artemis --version
+
+      - name: Test Toit in PATH - native shell
+        run: |
+          artemis --version
+
+      - name: Test outputs
+        shell: bash
+        run: |
+          if [[ -z "${{ matrix.version }}" ]]; then
+            echo "No version argument"
+            ARTEMIS_URL="${{ steps.setup2.outputs.artemis-url }}"
+            ARTEMIS_DIR="${{ steps.setup2.outputs.artemis-dir }}"
+            ARTEMIS_VERSION="${{ steps.setup2.outputs.artemis-version }}"
+          else
+            echo "With version argument"
+            ARTEMIS_URL="${{ steps.setup1.outputs.artemis-url }}"
+            ARTEMIS_DIR="${{ steps.setup1.outputs.artemis-dir }}"
+            ARTEMIS_VERSION="${{ steps.setup1.outputs.artemis-version }}"
+          fi
+          if [[ "$ARTEMIS_VERSION" == "" ]]; then
+            echo "No version"
+            exit 1
+          fi
+
+          if [[ "${{ matrix.version }}" != "latest" && "${{ matrix.version }}" != "" ]]; then
+            if [[ "$ARTEMIS_VERSION" != "${{ matrix.version }}" ]]; then
+              echo "Version does not match"
+              exit 1
+            fi
+          fi
+
+          if [[ ${{ runner.os }} == "Linux" ]]; then
+            if [[ ! -f "$ARTEMIS_DIR/artemis-linux/artemis" ]]; then
+              echo "Install dir not correct"
+              exit 1
+            fi
+          elif [[ ${{ runner.os }} == "macOS" ]]; then
+            if [[ ! -f "$ARTEMIS_DIR/artemis" ]]; then
+              echo "Install dir not correct"
+              exit 1
+            fi
+          elif [[ ${{ runner.os }} == "Windows" ]]; then
+            if [[ ! -f "$ARTEMIS_DIR/artemis.exe" ]]; then
+              echo "Install dir not correct"
+              exit 1
+            fi
+          else
+            echo "Unknown platform"
+            exit 1
+          fi
+
+          # The URL should be a valid URL.
+          if [[ ! "$ARTEMIS_URL" =~ ^https://.* ]]; then
+            echo "URL is not a valid URL"
+            exit 1
+          fi

@@ -1,0 +1,115 @@
+name: "Setup Artemis"
+description: "A GitHub Action to set up Artemis."
+branding:
+  icon: "play-circle"
+  color: "yellow"
+
+inputs:
+  version:
+    description: "The version to install. Installs the latest version if not specified."
+    default: "latest"
+
+outputs:
+  artemis-url:
+    description: "The URL that was used to download Artemis."
+    value: ${{ steps.setup_constants.outputs.ARTEMIS_URL }}
+  artemis-dir:
+    description: "The directory where Artemis is installed."
+    value: ${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}
+  artemis-version:
+    description: "The version of the installed Artemis."
+    value: ${{ steps.artemis_version.outputs.ARTEMIS_VERSION }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup constants
+      shell: bash
+      id: setup_constants
+      run: |
+        ARTEMIS_VERSION=${{ inputs.version }}
+
+        if [[ "$RUNNER_OS" = "Linux" ]]; then
+          ARTEMIS_FILE=artemis-linux.tar.gz
+        elif [[ "$RUNNER_OS" = "macOS" ]]; then
+          ARTEMIS_FILE=artemis-macos.zip
+        elif [[ "$RUNNER_OS" = "Windows" ]]; then
+          ARTEMIS_FILE=artemis-windows.zip
+        else
+          echo "UNSUPPORTED RUNNER: $RUNNER_OS"
+          exit 1
+        fi
+        echo "ARTEMIS_FILE=$ARTEMIS_FILE" >> $GITHUB_OUTPUT
+
+        if [[ $ARTEMIS_VERSION = latest ]]; then
+          echo "ARTEMIS_URL=https://github.com/toitware/artemis-releases/releases/latest/download/$ARTEMIS_FILE" >> $GITHUB_OUTPUT
+        else
+          echo "ARTEMIS_URL=https://github.com/toitware/artemis-releases/releases/download/$ARTEMIS_VERSION/$ARTEMIS_FILE" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create temporary directory
+      # Linux and macOS.
+      if: startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
+      shell: bash
+      run: |
+        INSTALL_DIR=$(mktemp -d)
+        echo "ARTEMIS_INSTALL_DIR=$INSTALL_DIR" >> $GITHUB_ENV
+
+    - name: Create temporary directory
+      # Windows.
+      if: startsWith(runner.os, 'Windows')
+      shell: powershell
+      run: |
+        $tempDir = New-TemporaryFile | % { $_.DirectoryName }
+        echo "ARTEMIS_INSTALL_DIR=$tempDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo "Temporary directory is $tempDir"
+
+    - name: Output temporary directory
+      shell: bash
+      id: tmp-dir
+      run: |
+        echo ARTEMIS_INSTALL_DIR=$ARTEMIS_INSTALL_DIR >> $GITHUB_OUTPUT
+
+    - name: Download Artemis
+      shell: bash
+      run: |
+        cd '${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}'
+        # Downloads the tar.gz/zip file.
+        curl -L -o ${{ steps.setup_constants.outputs.ARTEMIS_FILE }} ${{ steps.setup_constants.outputs.ARTEMIS_URL }}
+
+    - name: Extract Artemis
+      shell: bash
+      run: |
+        cd '${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}'
+        FILE=${{ steps.setup_constants.outputs.ARTEMIS_FILE }}
+        if [[ $FILE == *.zip ]]; then
+          unzip $FILE
+        else
+          tar x -zf $FILE
+        fi
+
+    - name: Add to PATH
+      if : startsWith(runner.os, 'Linux')
+      shell: bash
+      run: |
+        echo "${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}/artemis-linux" >> $GITHUB_PATH
+
+    - name: Add to PATH
+      if : startsWith(runner.os, 'macOS')
+      shell: bash
+      run: |
+        chmod +x "${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}/artemis"
+        echo "${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}" >> $GITHUB_PATH
+
+    - name: Add to PATH
+      # Windows.
+      shell: powershell
+      if: startsWith(runner.os, 'Windows')
+      run: |
+        echo "${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+    - name: Set Artemis version output
+      id: artemis_version
+      shell: bash
+      run: |
+        echo "ARTEMIS_VERSION=$(artemis --version)" >> $GITHUB_OUTPUT
