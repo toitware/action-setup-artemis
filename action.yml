@@ -92,7 +92,9 @@ runs:
       if : startsWith(runner.os, 'Linux')
       shell: bash
       run: |
+        # Older versions had the executable in an artemis-linux folder.
         echo "${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}/artemis-linux" >> $GITHUB_PATH
+        echo "${{ steps.tmp-dir.outputs.ARTEMIS_INSTALL_DIR }}" >> $GITHUB_PATH
 
     - name: Add to PATH
       if : startsWith(runner.os, 'macOS')

@@ -36,7 +36,7 @@ jobs:
         run: |
           artemis --version
 
-      - name: Test Toit in PATH - native shell
+      - name: Test Artemis in PATH - native shell
         run: |
           artemis --version
 
@@ -67,7 +67,7 @@ jobs:
           fi
 
           if [[ ${{ runner.os }} == "Linux" ]]; then
-            if [[ ! -f "$ARTEMIS_DIR/artemis-linux/artemis" ]]; then
+            if [[ ! -f "$ARTEMIS_DIR/artemis-linux/artemis" && ! -f "$ARTEMIS_DIR/artemis" ]]; then
               echo "Install dir not correct"
               exit 1
             fi
