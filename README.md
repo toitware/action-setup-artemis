@@ -10,9 +10,9 @@ See [action.yml](action.yml) for a complete list of options and outputs.
 steps:
 - uses: actions/checkout@v4
 
-- uses: toitware/action-setup-artemis@v1.0.0
+- uses: toitware/action-setup-artemis@v1.1.0
   with:
-    version: 'v0.14.5'
+    version: 'v0.15.3'
 
 - run: artemis --version
 ```
