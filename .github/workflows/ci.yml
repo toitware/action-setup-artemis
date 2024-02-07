@@ -36,7 +36,7 @@ jobs:
         run: |
           artemis --version
 
-      - name: Test Toit in PATH - native shell
+      - name: Test Artemis in PATH - native shell
         run: |
           artemis --version
 
